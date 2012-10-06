@@ -193,7 +193,7 @@ class TyzxServer(Closure):
             #O.id = int(child)
             #O.status = "nonexistent" 
 
-        msgname = Name.Name(self.prefix)
+        msgname = Name(self.prefix)
         msgname += str(child) 
 	msgname.components.append(versionFromTime (O.time))   # should have msgname.append
 	msgname.ccn_data_dirty=True
