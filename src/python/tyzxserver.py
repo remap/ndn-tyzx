@@ -1,5 +1,5 @@
-
-from pyccn import CCN, Name, Interest, Key, ContentObject, Closure
+import pyccn
+from pyccn import CCN, Name, Interest, Key, ContentObject, Closure, KeyLocator
 import logging
 import sys, threading, getpass, time
 
@@ -86,15 +86,15 @@ class PersonTrackUDPHandler(SocketServer.BaseRequestHandler):
             del tyzxObjs.objExits[id]
                 
 
-class TyzxServer(Closure.Closure):
+class TyzxServer(Closure):
     def __init__(self, prefixstr ):
-        self.handle = CCN.CCN()
+        self.handle = CCN()
 
         #XXX: temporary, until we allow fetching key from key storage
         self.key = self.handle.getDefaultKey()
-        self.keylocator = Key.KeyLocator(self.key)
+        self.keylocator = KeyLocator(self.key)
 
-        self.prefix = Name.Name(prefixstr)
+        self.prefix = Name(prefixstr)
 
 #        member_name = Name.Name(self.members_uri)
 #        member_name.appendKeyID(fix_digest(self.key.publicKeyID))
@@ -132,10 +132,10 @@ class TyzxServer(Closure.Closure):
     def upcall(self, kind, upcallInfo):
         global lasttime
         if lasttime is None:  # can't answer yet
-            return Closure.RESULT_OK
+            return pyccn.RESULT_OK
             
         if len(tyzxObjs.objs)<1:
-            return Closure.RESULT_OK
+            return pyccn.RESULT_OK
                 
         interest = upcallInfo.Interest
         #print "Interest", interest.name, time.time()
@@ -166,7 +166,7 @@ class TyzxServer(Closure.Closure):
             if len(freshids)>0:
                 child = freshids[0] 
             else:                 
-                return Closure.RESULT_OK    # no new content
+                return pyccn.RESULT_OK    # no new content
                 
         else:  # should check what we're receiving! take next component
 
@@ -185,7 +185,7 @@ class TyzxServer(Closure.Closure):
                 #print "child", child, "is exited"
                 O = tyzxObjs.objExits[child]
             else:
-                return Closure.RESULT_OK
+                return pyccn.RESULT_OK
             
             
             #O = CompositeObject(BaseObject())
@@ -203,10 +203,10 @@ class TyzxServer(Closure.Closure):
         #print "Present:", tyzxObjs.objs.keys(), time.time()
         self.handle.put(self.message)
 
-        return Closure.RESULT_INTEREST_CONSUMED
+        return pyccn.RESULT_INTEREST_CONSUMED
 
 
-        return Closure.RESULT_OK
+        return pyccn.RESULT_OK
         
         
 

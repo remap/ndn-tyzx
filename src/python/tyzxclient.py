@@ -1,5 +1,6 @@
 import time, struct
-from pyccn import CCN, Name, Interest, Key, ContentObject, Closure
+import pyccn
+from pyccn import CCN, Name, Interest, Key, ContentObject, Closure, KeyLocator, ExclusionFilter
 from Tyzx import CompositeObject, BaseObject
 
 prefix = "ccnx:/ndn/ucla.edu/apps/tv1/occupants"        
@@ -11,13 +12,13 @@ CCN_WAIT_TIME_MS = 1
 tyzxObjects = {}    
 oldObjects = set()    # still may be in the content store
 
-ccn = CCN.CCN()
+ccn = CCN()
 
-interestDiscover = Interest.Interest()
-interestDiscover.name = Name.Name(prefix)
+interestDiscover = Interest()
+interestDiscover.name = Name(prefix)
 interestDiscover.minSuffixComponents = 2   # occupant id + the implicit digest at a minimum
 
-interestUpdate = Interest.Interest()
+interestUpdate = Interest()
 interestUpdate.minSuffixComponents = 2   # time (version) + the implicit digest
 interestUpdate.childSelector = 1         # rightmost child
 #interestUpdate.interestLifetime = ???? 
@@ -30,27 +31,27 @@ def versionFromTime(t):
     return b'\xfd' + version
 last_version_marker = '\xfe\x00\x00\x00\x00\x00\x00'
 
-class ProcessIncoming(Closure.Closure):
+class ProcessIncoming(Closure):
 
     def upcall(self, kind, upcallInfo):
         global lastdiscovertime
     
-        if kind==Closure.UPCALL_INTEREST_TIMED_OUT:            
+        if kind==pyccn.UPCALL_INTEREST_TIMED_OUT:            
             interest = upcallInfo.Interest 
-            if len(interestDiscover.name)==len(interest.name): return Closure.RESULT_OK   # Occupants timeout
+            if len(interestDiscover.name)==len(interest.name): return pyccn.RESULT_OK   # Occupants timeout
             reqid = str(interest.name.components[-1])     # should we really need to strip? 
             if tyzxObjects.has_key(reqid): print "Timeout", reqid, "deleting..."             
             self.delObj(reqid)
-            return Closure.RESULT_OK
-        elif kind==Closure.UPCALL_CONTENT_UNVERIFIED: 
+            return pyccn.RESULT_OK
+        elif kind==pyccn.UPCALL_CONTENT_UNVERIFIED: 
             print "Content object is unverified for", key
-        elif kind==Closure.UPCALL_CONTENT:
+        elif kind==pyccn.UPCALL_CONTENT:
             try:             
                 O = CompositeObject(BaseObject())
                 O.fromJSON(upcallInfo.ContentObject.content)
             except:
                 print "Error converting content to object."
-                return Closure.RESULT_OK
+                return pyccn.RESULT_OK
             #print upcallInfo.ContentObject.name.components
 	    #print upcallInfo.ContentObject.content
             key = str(O.id)
@@ -66,7 +67,7 @@ class ProcessIncoming(Closure.Closure):
                     lastdiscovertime = 0 
             self.printPresent()
             # ** PARSE OR USE O.toJSON() here ** 
-        return Closure.RESULT_OK
+        return pyccn.RESULT_OK
 
     def delObj(self, key):
         oldObjects.add(key)
@@ -84,17 +85,17 @@ if __name__ == "__main__":
     while (True):        
         T = time.time()
         if T-lastdiscovertime > DISCOVER_INTEREST_PERIOD:
-            interestDiscover.exclude = Interest.ExclusionFilter()
-            interestDiscover.exclude.add_names([Name.Name([key]) for key in tyzxObjects.keys()])
-            interestDiscover.exclude.add_names([Name.Name([key]) for key in oldObjects]) 
+            interestDiscover.exclude = ExclusionFilter()
+            interestDiscover.exclude.add_names([Name([key]) for key in tyzxObjects.keys()])
+            interestDiscover.exclude.add_names([Name([key]) for key in oldObjects]) 
             ccn.expressInterest(interestDiscover.name, processIncoming, interestDiscover) 
             lastdiscovertime = time.time()        
         for obj in tyzxObjects.values():
             if T-obj.lastinteresttime < UPDATE_INTEREST_PERIOD:
                 continue
-            interestUpdate.name = Name.Name(prefix)    
+            interestUpdate.name = Name(prefix)    
             interestUpdate.name += str(obj.id) 
-            interestUpdate.exclude = Interest.ExclusionFilter()
+            interestUpdate.exclude = ExclusionFilter()
             interestUpdate.exclude.add_any()
             n = Name.Name()
             n.components.append(versionFromTime(obj.time))                
