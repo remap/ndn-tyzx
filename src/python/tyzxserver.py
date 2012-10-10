@@ -114,15 +114,16 @@ class TyzxServer(Closure):
         
 
         # SignedInfo
-        si = ContentObject.SignedInfo()
-        si.type = ContentObject.ContentType.CCN_CONTENT_DATA
+        si = pyccn.SignedInfo()
+        #si.type = pyccn.CCN_CONTENT_DATA
+        si.type = 0x0C04C0 # content type
         si.finalBlockID = b'\x00'
         si.publisherPublicKeyDigest = self.key.publicKeyID
         si.keyLocator = self.keylocator
         si.freshnessSeconds = FRESHNESS_SECONDS
 
         # ContentObject
-        co = ContentObject.ContentObject()
+        co = ContentObject()
         co.content = content
         co.name = name
         co.signedInfo = si        
@@ -196,7 +197,7 @@ class TyzxServer(Closure):
         msgname = Name(self.prefix)
         msgname += str(child) 
 	msgname.components.append(versionFromTime (O.time))   # should have msgname.append
-	msgname.ccn_data_dirty=True
+	#msgname.ccn_data_dirty=True - now handled within PyCCN
 # need binary add component
         self.message = self.publish(msgname, O.toJSON())
         #print "Publishing", msgname, O.toJSON()
